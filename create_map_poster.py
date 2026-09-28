@@ -197,6 +197,7 @@ def load_theme(theme_name="terracotta"):
             "road_tertiary": "#D9A08A",
             "road_residential": "#E5C4B0",
             "road_default": "#D9A08A",
+            "buildings": "#D9A08A",
         }
 
     with open(theme_file, "r", encoding=FILE_ENCODING) as f:
@@ -493,6 +494,7 @@ def create_poster(
     display_city=None,
     display_country=None,
     fonts=None,
+    credit=None,
 ):
     """
     Generate a complete map poster with roads, water, parks, and typography.
@@ -524,7 +526,7 @@ def create_poster(
 
     # Progress bar for data fetching
     with tqdm(
-        total=3,
+        total=4,
         desc="Fetching map data",
         unit="step",
         bar_format="{l_bar}{bar}| {n_fmt}/{total_fmt}",
@@ -554,6 +556,16 @@ def create_poster(
             compensated_dist,
             tags={"leisure": "park", "landuse": "grass"},
             name="parks",
+        )
+        pbar.update(1)
+
+        # 4. Fetch Buildings
+        pbar.set_description("Downloading buildings")
+        buildings = fetch_features(
+            point,
+            compensated_dist,
+            tags={"building": True},
+            name="buildings",
         )
         pbar.update(1)
 
@@ -591,6 +603,16 @@ def create_poster(
             except Exception:
                 parks_polys = parks_polys.to_crs(g_proj.graph['crs'])
             parks_polys.plot(ax=ax, facecolor=THEME['parks'], edgecolor='none', zorder=0.8)
+
+    if buildings is not None and not buildings.empty:
+        buildings_polys = buildings[buildings.geometry.type.isin(["Polygon", "MultiPolygon"])]
+        if not buildings_polys.empty:
+            try:
+                buildings_polys = ox.projection.project_gdf(buildings_polys)
+            except Exception:
+                buildings_polys = buildings_polys.to_crs(g_proj.graph['crs'])
+            building_color = THEME.get("buildings", THEME["road_residential"])
+            buildings_polys.plot(ax=ax, facecolor=building_color, edgecolor='none', zorder=0.9)
     # Layer 2: Roads with hierarchy coloring
     print("Applying road hierarchy colors...")
     edge_colors = get_edge_colors_by_type(g_proj)
@@ -733,20 +755,24 @@ def create_poster(
         zorder=11,
     )
 
-    # --- ATTRIBUTION (bottom right) ---
+    # --- ATTRIBUTION + AUTHOR CREDIT (single centered line) ---
     if FONTS:
-        font_attr = FontProperties(fname=FONTS["light"], size=8)
+        font_attr = FontProperties(fname=FONTS["light"], size=6)
     else:
-        font_attr = FontProperties(family="monospace", size=8)
+        font_attr = FontProperties(family="monospace", size=6)
+
+    attribution_text = "© OpenStreetMap contributors (ODbL)"
+    if credit:
+        attribution_text = f"{attribution_text} · {credit}"
 
     ax.text(
-        0.98,
+        0.5,
         0.02,
-        "© OpenStreetMap contributors",
+        attribution_text,
         transform=ax.transAxes,
         color=THEME["text"],
-        alpha=0.5,
-        ha="right",
+        alpha=0.35,
+        ha="center",
         va="bottom",
         fontproperties=font_attr,
         zorder=11,
@@ -955,6 +981,13 @@ Examples:
         choices=["png", "svg", "pdf"],
         help="Output format for the poster (default: png)",
     )
+    parser.add_argument(
+        "--credit",
+        "-cr",
+        type=str,
+        default=None,
+        help='Optional author credit/monogram shown at bottom-left (e.g., "LR")',
+    )
 
     args = parser.parse_args()
 
@@ -1037,6 +1070,7 @@ Examples:
                 display_city=args.display_city,
                 display_country=args.display_country,
                 fonts=custom_fonts,
+                credit=args.credit,
             )
 
         print("\n" + "=" * 50)
