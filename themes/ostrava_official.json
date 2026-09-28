@@ -1,0 +1,15 @@
+{
+  "name": "Ostrava Official",
+  "description": "Official city colors of Ostrava — heraldic dark navy (Pantone 2955) with light Ostrava blue accents (Pantone 312)",
+  "bg": "#003C69",
+  "text": "#00ADD0",
+  "gradient_color": "#003C69",
+  "water": "#00284A",
+  "parks": "#0E5687",
+  "road_motorway": "#00ADD0",
+  "road_primary": "#22BCDA",
+  "road_secondary": "#4DC8DD",
+  "road_tertiary": "#6FB3CC",
+  "road_residential": "#5A8AAB",
+  "road_default": "#4DC8DD"
+}
